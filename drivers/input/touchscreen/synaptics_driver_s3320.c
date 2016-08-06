@@ -1307,7 +1307,7 @@ static void gesture_judge(struct synaptics_ts_data *ts)
 }
 #endif
 /***************end****************/
-static char prlog_count;
+
 #ifdef REPORT_2D_PRESSURE
 static unsigned char pres_value;
 #endif
@@ -1504,8 +1504,6 @@ void int_touch(void)
 	last_status = current_status & 0x02;
 
 	if (finger_num == 0/* && last_status && (check_key <= 1)*/) {
-		if (3 == (++prlog_count % 6))
-			TPD_ERR("all finger up\n");
 		input_report_key(ts->input_dev, BTN_TOOL_FINGER, 0);
 		s3320_stop_buttons = false;
 
