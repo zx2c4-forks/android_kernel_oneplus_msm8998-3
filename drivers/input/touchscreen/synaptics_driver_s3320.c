@@ -1282,6 +1282,9 @@ static void gesture_judge(struct synaptics_ts_data *ts)
 	|| (gesture == Circle && Circle_gesture)
 	|| (gesture == DouSwip && DouSwip_gesture)
 	|| gesture == Sgestrue || gesture == Wgestrue || gesture == Mgestrue) {
+		if (DisableGestureHaptic)
+			qpnp_hap_ignore_next_request();
+		
 		gesture_upload = gesture;
 		input_report_key(ts->input_dev, keyCode, 1);
 		input_sync(ts->input_dev);
