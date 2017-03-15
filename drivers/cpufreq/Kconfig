@@ -178,6 +178,10 @@ config CPU_FREQ_DEFAULT_GOV_ALUCARD
           It has been known to be battery friendly without sacrificing much performance. If unsure have a look at the help section of the
 	  driver. Fallback governor will be the performance governor.
 
+config CPU_FREQ_DEFAULT_GOV_DARKNESS
+	bool "darkness"
+	select CPU_FREQ_GOV_DARKNESS
+
 endchoice
 
 config CPU_FREQ_GOV_PERFORMANCE
@@ -352,6 +356,9 @@ config CPU_FREQ_GOV_SCHEDUTIL
 	  If in doubt, say N.
 
 comment "CPU frequency scaling drivers"
+
+config CPU_FREQ_GOV_DARKNESS
+	tristate "'darkness' cpufreq policy governor"
 
 config CPUFREQ_DT
 	tristate "Generic DT based cpufreq driver"
