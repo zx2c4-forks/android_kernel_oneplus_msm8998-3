@@ -60,6 +60,8 @@
 
 #include <linux/moduleparam.h>
 
+#include <linux/moduleparam.h>
+
 /*----------------------Global Define--------------------------------*/
 
 #define TP_UNKNOWN 0
@@ -180,6 +182,11 @@ struct test_header {
 // Button key codes
 #define KEY_BUTTON_LEFT     KEY_BACK
 #define KEY_BUTTON_RIGHT    KEY_APPSELECT
+
+// module parameter
+bool s3320_stop_buttons;
+bool no_buttons_during_touch = true;
+module_param(no_buttons_during_touch, bool, 0644);
 
 bool haptic_feedback_disable = false;
 module_param(haptic_feedback_disable, bool, 0644);
@@ -1508,6 +1515,7 @@ void int_touch(void)
 			MT_TOOL_FINGER, finger_status);
 			input_report_key(ts->input_dev,
 			BTN_TOOL_FINGER, 1);
+			s3320_stop_buttons = no_buttons_during_touch;
 			input_report_abs(ts->input_dev,
 			ABS_MT_POSITION_X, points.x);
 			input_report_abs(ts->input_dev,
@@ -1551,6 +1559,8 @@ void int_touch(void)
 
 	if (finger_num == 0/* && last_status && (check_key <= 1)*/) {
 		input_report_key(ts->input_dev, BTN_TOOL_FINGER, 0);
+		s3320_stop_buttons = false;
+
 #ifndef TYPE_B_PROTOCOL
 		input_mt_sync(ts->input_dev);
 #endif
@@ -1605,7 +1615,7 @@ static void int_key_report_s3508(struct synaptics_ts_data *ts)
 	}
 
 	if (!ts->key_disable) {
-		if ((button_key & BUTTON_LEFT) && !(ts->pre_btn_state & BUTTON_LEFT)) {
+		if ((button_key & BUTTON_LEFT) && !(ts->pre_btn_state & BUTTON_LEFT) && !s3320_stop_buttons) {
 			input_report_key(ts->input_dev, keycode_left, 1);
 			input_sync(ts->input_dev);
 		} else if (!(button_key & BUTTON_LEFT) && (ts->pre_btn_state & BUTTON_LEFT)) {
@@ -1613,7 +1623,7 @@ static void int_key_report_s3508(struct synaptics_ts_data *ts)
 			input_sync(ts->input_dev);
 		}
 
-		if ((button_key & BUTTON_RIGHT) && !(ts->pre_btn_state & BUTTON_RIGHT)) {
+		if ((button_key & BUTTON_RIGHT) && !(ts->pre_btn_state & BUTTON_RIGHT) && !s3320_stop_buttons) {
 			input_report_key(ts->input_dev, keycode_right, 1);
 			input_sync(ts->input_dev);
 		} else if (!(button_key & BUTTON_RIGHT) && (ts->pre_btn_state & BUTTON_RIGHT)) {
