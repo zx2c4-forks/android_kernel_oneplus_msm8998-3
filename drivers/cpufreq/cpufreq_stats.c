@@ -283,11 +283,19 @@ static ssize_t show_time_in_state(struct cpufreq_policy *policy, char *buf)
 	ssize_t len = 0;
 	int i;
 
+#if defined CONFIG_HZ_250
+	u64 factor = 25;
+#elif defined CONFIG_HZ_300
+	u64 factor = 30;
+#else
+	u64 factor = 10;
+#endif
+
 	cpufreq_stats_update(stats);
 	for (i = 0; i < stats->max_state; i++) {
 		len += sprintf(buf + len, "%u %llu\n", stats->freq_table[i],
 			(unsigned long long)
-			jiffies_64_to_clock_t(stats->time_in_state[i]));
+			jiffies_64_to_clock_t((stats->time_in_state[i] / factor) * 10));
 	}
 	return len;
 }
