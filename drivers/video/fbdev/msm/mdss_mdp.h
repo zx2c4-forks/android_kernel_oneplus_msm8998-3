@@ -58,7 +58,7 @@
 
 /* wait for 300ms to take into account scheduling related delays
  * This number is empirical*/
-#define KOFF_TIMEOUT_MS 300
+#define KOFF_TIMEOUT_MS 200
 #define KOFF_TIMEOUT msecs_to_jiffies(KOFF_TIMEOUT_MS)
 
 #define OVERFETCH_DISABLE_TOP		BIT(0)
