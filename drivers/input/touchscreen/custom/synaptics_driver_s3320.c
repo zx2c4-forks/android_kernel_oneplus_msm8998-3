@@ -181,19 +181,17 @@ struct test_header {
 #define KEY_BUTTON_LEFT     KEY_BACK
 #define KEY_BUTTON_RIGHT    KEY_APPSELECT
 
-// module parameter
-bool s3320_stop_buttons;
-bool no_buttons_during_touch = true;
-module_param(no_buttons_during_touch, bool, 0644);
+bool haptic_feedback_disable = false;
+module_param(haptic_feedback_disable, bool, 0644);
 
 /*********************for Debug LOG switch*******************/
-#define TPD_ERR(a, arg...)  pr_err(TPD_DEVICE ": " a, ##arg)
-#define TPDTM_DMESG(a, arg...)  printk(TPD_DEVICE ": " a, ##arg)
+#define TPD_ERR(a, arg...)  pr_debug(TPD_DEVICE ": " a, ##arg)
+#define TPDTM_DMESG(a, arg...)  pr_debug(TPD_DEVICE ": " a, ##arg)
 
 #define TPD_DEBUG(a, arg...)\
 	do {\
 		if (tp_debug)\
-		pr_err(TPD_DEVICE ": " a, ##arg);\
+		pr_debug(TPD_DEVICE ": " a, ##arg);\
 	} while (0)
 
 /*-------------------------------Global Variable-----------------------------*/
@@ -229,6 +227,8 @@ static struct synaptics_ts_data *ts_g = NULL;
 static struct workqueue_struct *synaptics_wq = NULL;
 static struct workqueue_struct *synaptics_report = NULL;
 static struct workqueue_struct *get_base_report = NULL;
+
+void qpnp_hap_ignore_next_request(void);
 
 #ifdef SUPPORT_GESTURE
 static uint32_t clockwise;
@@ -1331,6 +1331,9 @@ static void gesture_judge(struct synaptics_ts_data *ts)
 		input_sync(ts->input_dev);
 		input_report_key(ts->input_dev, keyCode, 0);
 		input_sync(ts->input_dev);
+		
+		if (haptic_feedback_disable)
+			qpnp_hap_ignore_next_request();
 	} else {
 		ret = i2c_smbus_read_i2c_block_data(ts->client, F12_2D_CTRL20, 3, &(reportbuf[0x0]));
 		ret = reportbuf[2] & 0x20;
@@ -1351,7 +1354,7 @@ static void gesture_judge(struct synaptics_ts_data *ts)
 }
 #endif
 /***************end****************/
-static char prlog_count;
+
 #ifdef REPORT_2D_PRESSURE
 static unsigned char pres_value;
 #endif
@@ -1505,7 +1508,6 @@ void int_touch(void)
 			MT_TOOL_FINGER, finger_status);
 			input_report_key(ts->input_dev,
 			BTN_TOOL_FINGER, 1);
-			s3320_stop_buttons = no_buttons_during_touch;
 			input_report_abs(ts->input_dev,
 			ABS_MT_POSITION_X, points.x);
 			input_report_abs(ts->input_dev,
@@ -1548,11 +1550,7 @@ void int_touch(void)
 	last_status = current_status & 0x02;
 
 	if (finger_num == 0/* && last_status && (check_key <= 1)*/) {
-		if (3 == (++prlog_count % 6))
-			TPD_ERR("all finger up\n");
 		input_report_key(ts->input_dev, BTN_TOOL_FINGER, 0);
-		s3320_stop_buttons = false;
-
 #ifndef TYPE_B_PROTOCOL
 		input_mt_sync(ts->input_dev);
 #endif
@@ -1607,7 +1605,7 @@ static void int_key_report_s3508(struct synaptics_ts_data *ts)
 	}
 
 	if (!ts->key_disable) {
-		if ((button_key & BUTTON_LEFT) && !(ts->pre_btn_state & BUTTON_LEFT) && !s3320_stop_buttons) {
+		if ((button_key & BUTTON_LEFT) && !(ts->pre_btn_state & BUTTON_LEFT)) {
 			input_report_key(ts->input_dev, keycode_left, 1);
 			input_sync(ts->input_dev);
 		} else if (!(button_key & BUTTON_LEFT) && (ts->pre_btn_state & BUTTON_LEFT)) {
@@ -1615,7 +1613,7 @@ static void int_key_report_s3508(struct synaptics_ts_data *ts)
 			input_sync(ts->input_dev);
 		}
 
-		if ((button_key & BUTTON_RIGHT) && !(ts->pre_btn_state & BUTTON_RIGHT) && !s3320_stop_buttons) {
+		if ((button_key & BUTTON_RIGHT) && !(ts->pre_btn_state & BUTTON_RIGHT)) {
 			input_report_key(ts->input_dev, keycode_right, 1);
 			input_sync(ts->input_dev);
 		} else if (!(button_key & BUTTON_RIGHT) && (ts->pre_btn_state & BUTTON_RIGHT)) {
@@ -3743,7 +3741,7 @@ static const struct file_operations key_disable_proc_fops = {
 #define CREATE_GESTURE_NODE(NAME)\
 	CREATE_PROC_NODE(touchpanel, NAME##_enable, 0666)
 
-static int init_synaptics_proc(struct synaptics_ts_data *ts)
+static int init_synaptics_proc(void)
 {
 	int ret = 0;
 
@@ -3812,11 +3810,8 @@ static int init_synaptics_proc(struct synaptics_ts_data *ts)
 	CREATE_PROC_NODE(touchpanel, touch_press, 0666);
 
 #ifdef SUPPORT_TP_TOUCHKEY
-	// disable button swap and key disabler proc nodes for 17801 (dumpling)
-	if (!ts->support_1080x2160_tp) {
-		CREATE_PROC_NODE(s1302, key_rep, 0666);
-		CREATE_PROC_NODE(touchpanel, key_disable, 0666);
-	}
+	CREATE_PROC_NODE(s1302, key_rep, 0666);
+	CREATE_PROC_NODE(touchpanel, key_disable, 0666);
 #endif
 
 	return ret;
@@ -4886,7 +4881,7 @@ static int synaptics_ts_probe(struct i2c_client *client,
 
 	}
 #endif
-	init_synaptics_proc(ts);
+	init_synaptics_proc();
 	TPDTM_DMESG("synaptics_ts_probe 3203: normal end\n");
 	return 0;
 
@@ -5134,7 +5129,6 @@ static int fb_notifier_callback(struct notifier_block *self, unsigned long event
 		if ((*blank == FB_BLANK_UNBLANK/* || *blank == FB_BLANK_VSYNC_SUSPEND || *blank == FB_BLANK_NORMAL*/)\
 		        //&& (event == FB_EVENT_BLANK ))
 		        && (event == FB_EARLY_EVENT_BLANK)) {
-			s3320_stop_buttons = false;
 			if (ts->is_suspended == 1) {
 				TPD_DEBUG("%s going TP resume start\n", __func__);
 				ts->is_suspended = 0;
