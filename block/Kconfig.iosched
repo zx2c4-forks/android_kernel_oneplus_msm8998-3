@@ -156,13 +156,6 @@ choice
 
 	config DEFAULT_BFQ
 		bool "BFQ" if IOSCHED_BFQ=y
-		help
-		  Selects BFQ as the default I/O scheduler which will be
-		  used by default for all block devices.
-		  The BFQ I/O scheduler aims at distributing the bandwidth
-		  as desired, independently of the disk parameters and with
-		  any workload. It also tries to guarantee low latency to
-		  interactive and soft real-time applications.
 
 	config DEFAULT_NOOP
 		bool "No-op"
@@ -184,13 +177,6 @@ choice
 
 	config DEFAULT_ROW
 		bool "ROW" if IOSCHED_ROW=y
-		help
-		  The ROW I/O scheduler gives priority to READ requests
-		  over the WRITE requests when dispatching, without starving
-		  WRITE requests. Requests are kept in priority queues.
-		  Dispatching is done in a RR manner when the dispatch quantum
-		  for each queue is defined according to queue priority.
-		  Most suitable for mobile devices.
 
 endchoice
 
