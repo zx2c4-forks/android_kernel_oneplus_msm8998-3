@@ -34,14 +34,14 @@
 #include <linux/time.h>
 
 /* Available bits for boost_policy state */
-#define DRIVER_ENABLED        (1U << 0)
+#define DRIVER_ENABLED              (1U << 0)
 #define FINGERPRINT_BOOST           (1U << 1)
 
 /* Fingerprint sensor input key */
 #define FINGERPRINT_KEY 0x2ee
 
 /* The duration in milliseconds for the fingerprint boost */
-#define FP_BOOST_MS (2000)
+#define FP_BOOST_MS (4000)
 
 /*
  * "fp_config" = "fingerprint boost configuration". This contains the data and
