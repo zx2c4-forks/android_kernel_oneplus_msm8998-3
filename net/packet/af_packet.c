@@ -1716,6 +1716,8 @@ static int fanout_add(struct sock *sk, u16 id, u16 type_flags)
 		if (refcount_read(&match->sk_ref) < PACKET_FANOUT_MAX) {
 			__dev_remove_pack(&po->prot_hook);
 			po->fanout = match;
+			po->rollover = rollover;
+			rollover = NULL;
 			refcount_set(&match->sk_ref, refcount_read(&match->sk_ref) + 1);
 			__fanout_link(sk, po);
 			err = 0;
@@ -1723,7 +1725,7 @@ static int fanout_add(struct sock *sk, u16 id, u16 type_flags)
 	}
 	spin_unlock(&po->bind_lock);
 
-	if (err && !atomic_read(&match->sk_ref)) {
+	if (err && !refcount_read(&match->sk_ref)) {
 		list_del(&match->list);
 		kfree(match);
 	}
